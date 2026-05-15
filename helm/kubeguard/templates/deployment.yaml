@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubeguard.fullname" . }}
+  labels:
+    {{- include "kubeguard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kubeguard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kubeguard.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "kubeguard.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.aws.accessKeyId | quote }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.aws.secretAccessKey | quote }}
+            - name: SLACK_WEBHOOK
+              value: {{ .Values.alerts.slackWebhook | quote }}
+            - name: SNS_TOPIC_ARN
+              value: {{ .Values.alerts.snsTopicArn | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.audit.awsRegion | quote }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "kubeguard.fullname" . }}-config

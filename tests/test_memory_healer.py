@@ -1,0 +1,90 @@
+import unittest
+from unittest.mock import MagicMock
+from datetime import datetime
+import sys
+import os
+
+# Add the project root to sys.path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from controller.healers.memory_leak import MemoryLeakHealer
+
+class TestMemoryHealer(unittest.TestCase):
+    def setUp(self):
+        self.prom = MagicMock()
+        self.k8s = MagicMock()
+        self.audit = MagicMock()
+        self.notify = MagicMock()
+        self.cfg = {
+            'healers': {
+                'memory_leak': {
+                    'enabled': True,
+                    'threshold_mb': 100,
+                    'trend_window_minutes': 5,
+                    'slope_threshold_mb_per_min': 10,
+                    'cooldown_minutes': 5
+                }
+            }
+        }
+        self.healer = MemoryLeakHealer(self.prom, self.k8s, self.audit, self.notify, self.cfg)
+
+    def test_memory_leak_detection_and_heal(self):
+        # Setup mock pod
+        pod = MagicMock()
+        pod.metadata.name = 'test-pod-abc-123'
+        self.k8s.list_pods.return_value = [pod]
+        
+        # Scenario: Memory > threshold AND slope > threshold
+        self.prom.pod_memory_mb.return_value = 150
+        self.prom.pod_memory_trend_mb_per_min.return_value = 25
+        
+        self.healer.run('default')
+        
+        # Verify healing actions
+        self.k8s.rolling_restart.assert_called_once_with('default', 'test-pod')
+        self.audit.log_event.assert_called_once()
+        self.notify.send.assert_called_once()
+
+    def test_memory_leak_no_action_below_threshold(self):
+        pod = MagicMock()
+        pod.metadata.name = 'test-pod-abc-123'
+        self.k8s.list_pods.return_value = [pod]
+        
+        # Scenario: Memory < threshold
+        self.prom.pod_memory_mb.return_value = 50
+        
+        self.healer.run('default')
+        
+        self.k8s.rolling_restart.assert_not_called()
+
+    def test_memory_leak_no_action_low_slope(self):
+        pod = MagicMock()
+        pod.metadata.name = 'test-pod-abc-123'
+        self.k8s.list_pods.return_value = [pod]
+        
+        # Scenario: Memory > threshold BUT slope is stable
+        self.prom.pod_memory_mb.return_value = 150
+        self.prom.pod_memory_trend_mb_per_min.return_value = 2
+        
+        self.healer.run('default')
+        
+        self.k8s.rolling_restart.assert_not_called()
+
+    def test_memory_leak_cooldown(self):
+        pod = MagicMock()
+        pod.metadata.name = 'test-pod-abc-123'
+        self.k8s.list_pods.return_value = [pod]
+        
+        self.prom.pod_memory_mb.return_value = 150
+        self.prom.pod_memory_trend_mb_per_min.return_value = 25
+        
+        # First run triggers heal
+        self.healer.run('default')
+        self.assertEqual(self.k8s.rolling_restart.call_count, 1)
+        
+        # Second run immediately after should skip due to cooldown
+        self.healer.run('default')
+        self.assertEqual(self.k8s.rolling_restart.call_count, 1)
+
+if __name__ == '__main__':
+    unittest.main()

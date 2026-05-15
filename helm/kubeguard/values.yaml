@@ -1,0 +1,34 @@
+replicaCount: 1
+
+image:
+  repository: kubeguard-controller
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+kubernetes:
+  namespace: default
+  watch_interval_seconds: 15
+
+healers:
+  memory_leak:
+    enabled: true
+    threshold_mb: 800
+    trend_window_minutes: 5
+    slope_threshold_mb_per_min: 20
+    cooldown_minutes: 10
+
+alerts:
+  slackWebhook: "" # Set via --set alerts.slackWebhook
+  snsTopicArn: ""  # Set via --set alerts.snsTopicArn
+
+audit:
+  dynamodbTable: kubeguard-events
+  awsRegion: ap-south-1
+
+aws:
+  accessKeyId: ""     # Set via --set aws.accessKeyId
+  secretAccessKey: "" # Set via --set aws.secretAccessKey
+
+serviceAccount:
+  create: true
+  name: ""
