@@ -183,8 +183,12 @@ kubeguard/
 │   ├── prometheus_client.py
 │   ├── notifier.py
 │   ├── audit.py
+│   ├── Dockerfile
 │   └── healers/
 │       └── memory_leak.py
+│
+├── k8s/
+│   └── memory_hog-deploy.yaml
 │
 ├── test_apps/
 │   └── memory_hog/
@@ -424,7 +428,22 @@ helm install prometheus prometheus-community/kube-prometheus-stack \
 
 ---
 
-# Step 3 — Deploy Test App
+# Step 3 — Create Secrets (Required for Helm)
+
+```bash
+# Create AWS credentials secret
+kubectl create secret generic kubeguard-aws-creds \
+  --from-literal=access_key_id="YOUR_AWS_KEY" \
+  --from-literal=secret_access_key="YOUR_AWS_SECRET"
+
+# Create Alerts secret (Slack)
+kubectl create secret generic kubeguard-alerts \
+  --from-literal=slack_webhook="YOUR_SLACK_WEBHOOK"
+```
+
+---
+
+# Step 4 — Deploy Test App
 
 ```bash
 kubectl apply -f k8s/memory-hog-deploy.yaml
@@ -432,24 +451,41 @@ kubectl apply -f k8s/memory-hog-deploy.yaml
 
 ---
 
-# Step 4 — Run Controller
+# Step 5 — Run Controller Locally (Development)
 
 ```bash
+# 1. Required for local dev — port-forward Prometheus in background
+kubectl port-forward -n monitoring svc/prometheus-kube-prometheus-prometheus 9090:9090 &
+export PROMETHEUS_URL=http://localhost:9090
+
+# 2. Run the controller
 python3 controller/main.py
 ```
 
+# Step 6 — Verify It's Working
+
+1. **Check controller is running (if deployed via Helm):**
+   ```bash
+   kubectl get pods -l app.kubernetes.io/name=kubeguard
+   ```
+
+2. **Watch controller logs live:**
+   ```bash
+   kubectl logs -l app.kubernetes.io/name=kubeguard -f
+   ```
+
+3. **Observe auto-healing:**
+   After `memory-hog` is deployed and running for a few minutes, watch for this log line in the controller:
+   `LEAK DETECTED — memory-hog-xxx: Memory 820MB, growing at 25MB/min`
+
+   Then verify the deployment is restarting:
+   ```bash
+   kubectl get pods -l app=memory-hog -w
+   ```
+
 ---
 
-# Step 5 — Observe Auto-Healing
-
-KubeGuard:
-
-* detects memory leak
-* triggers rolling restart
-* logs event
-* sends Slack alert
-
----
+# CI/CD Pipeline
 
 # CI/CD Pipeline
 

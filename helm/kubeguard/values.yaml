@@ -5,6 +5,14 @@ image:
   pullPolicy: IfNotPresent
   tag: "latest"
 
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
 kubernetes:
   namespace: default
   watch_interval_seconds: 15
@@ -18,7 +26,7 @@ healers:
     cooldown_minutes: 10
 
 alerts:
-  slackWebhook: "" # Set via --set alerts.slackWebhook
+  secretName: "kubeguard-alerts"
   snsTopicArn: ""  # Set via --set alerts.snsTopicArn
 
 audit:
@@ -26,8 +34,7 @@ audit:
   awsRegion: ap-south-1
 
 aws:
-  accessKeyId: ""     # Set via --set aws.accessKeyId
-  secretAccessKey: "" # Set via --set aws.secretAccessKey
+  secretName: "kubeguard-aws-creds"
 
 serviceAccount:
   create: true

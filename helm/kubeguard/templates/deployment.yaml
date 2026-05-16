@@ -19,13 +19,24 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: AWS_ACCESS_KEY_ID
-              value: {{ .Values.aws.accessKeyId | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aws.secretName | default "kubeguard-aws-creds" }}
+                  key: access_key_id
             - name: AWS_SECRET_ACCESS_KEY
-              value: {{ .Values.aws.secretAccessKey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aws.secretName | default "kubeguard-aws-creds" }}
+                  key: secret_access_key
             - name: SLACK_WEBHOOK
-              value: {{ .Values.alerts.slackWebhook | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.alerts.secretName | default "kubeguard-alerts" }}
+                  key: slack_webhook
             - name: SNS_TOPIC_ARN
               value: {{ .Values.alerts.snsTopicArn | quote }}
             - name: AWS_REGION
