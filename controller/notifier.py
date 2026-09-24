@@ -1,42 +1,35 @@
-import requests, boto3, logging
+import logging
+from kubernetes import client
+from datetime import datetime, timezone
 
-log = logging.getLogger('kubeguard.notifier')
+log = logging.getLogger('clusterpulse.notifier')
 
 class Notifier:
-    def __init__(self, slack_webhook='', sns_topic_arn='', aws_creds=None):
-        self.slack_webhook = slack_webhook
-        self.sns_topic_arn = sns_topic_arn
-        self.aws_creds = aws_creds or {}
+    def __init__(self):
+        self.core_v1 = client.CoreV1Api()
 
-    def send(self, healer, target, action, reason):
-        emoji = {'memory_leak': '🧠'}.get(healer, '🔧')
-        msg = (f'{emoji} *KubeGuard Auto-Heal*\n'
-               f'*Healer:* {healer}\n'
-               f'*Target:* {target}\n'
-               f'*Action:* {action}\n'
-               f'*Reason:* {reason}')
-        self._slack(msg)
-        self._sns(msg)
-
-    def _slack(self, msg):
-        if not self.slack_webhook:
-            return
+    def send(self, healer, target, action, reason, namespace='default'):
+        msg = f"clusterpulse Auto-Heal | Healer: {healer} | Action: {action} | Reason: {reason}"
+        event = client.CoreV1Event(
+            metadata=client.V1ObjectMeta(
+                generate_name=f"clusterpulse-{healer}-",
+                namespace=namespace
+            ),
+            type="Warning",
+            reason="MemoryLeakDetected" if healer == 'memory_leak' else "AutoHealTriggered",
+            message=msg,
+            source=client.V1EventSource(component="clusterpulse-controller"),
+            involved_object=client.V1ObjectReference(
+                kind="Pod",
+                name=target,
+                namespace=namespace
+            ),
+            first_timestamp=datetime.now(timezone.utc),
+            last_timestamp=datetime.now(timezone.utc),
+            count=1
+        )
         try:
-            requests.post(self.slack_webhook, json={'text': msg}, timeout=5)
-            log.info('Slack notification sent')
+            self.core_v1.create_namespaced_event(namespace, event)
+            log.info(f"Kubernetes event emitted for {target}")
         except Exception as e:
-            log.warning(f'Slack failed (non-fatal): {e}')
-
-    def _sns(self, msg):
-        if not self.sns_topic_arn or not self.aws_creds:
-            return
-        try:
-            sns = boto3.client('sns',
-                region_name=self.aws_creds.get('region_name', 'ap-south-1'),
-                aws_access_key_id=self.aws_creds.get('aws_access_key_id'),
-                aws_secret_access_key=self.aws_creds.get('aws_secret_access_key'))
-            sns.publish(TopicArn=self.sns_topic_arn, Message=msg,
-                        Subject='KubeGuard Alert')
-            log.info('SNS notification sent')
-        except Exception as e:
-            log.warning(f'SNS failed (non-fatal): {e}')
+            log.error(f"Failed to emit Kubernetes event: {e}")

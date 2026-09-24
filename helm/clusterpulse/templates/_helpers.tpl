@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "kubeguard.name" -}}
+{{- define "clusterpulse.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "kubeguard.fullname" -}}
+{{- define "clusterpulse.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "kubeguard.chart" -}}
+{{- define "clusterpulse.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "kubeguard.labels" -}}
-helm.sh/chart: {{ include "kubeguard.chart" . }}
-{{ include "kubeguard.selectorLabels" . }}
+{{- define "clusterpulse.labels" -}}
+helm.sh/chart: {{ include "clusterpulse.chart" . }}
+{{ include "clusterpulse.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "kubeguard.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kubeguard.name" . }}
+{{- define "clusterpulse.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "clusterpulse.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "kubeguard.serviceAccountName" -}}
+{{- define "clusterpulse.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "kubeguard.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "clusterpulse.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

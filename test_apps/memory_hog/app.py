@@ -18,7 +18,7 @@ def metrics():
 
 def leak_memory():
     while True:
-        leak.append('x' * 1000) # add 1KB every second
+        leak.append('x' * int(1.5 * 1024 * 1024)) # add 1.5MB every second
         time.sleep(1)
 
 # Start the leak in a background thread

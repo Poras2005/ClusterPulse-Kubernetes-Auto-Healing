@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clusterpulse.fullname" . }}-config
+data:
+  config.yaml: |
+    kubernetes:
+      namespace: {{ .Values.kubernetes.namespace }}
+      watch_interval_seconds: {{ .Values.kubernetes.watch_interval_seconds }}
+    healers:
+      memory_leak:
+        enabled: {{ .Values.healers.memory_leak.enabled }}
+        threshold_percent: {{ .Values.healers.memory_leak.threshold_percent }}
+        trend_window_minutes: {{ .Values.healers.memory_leak.trend_window_minutes }}
+        slope_threshold_percent_per_min: {{ .Values.healers.memory_leak.slope_threshold_percent_per_min }}
+        cooldown_minutes: {{ .Values.healers.memory_leak.cooldown_minutes }}

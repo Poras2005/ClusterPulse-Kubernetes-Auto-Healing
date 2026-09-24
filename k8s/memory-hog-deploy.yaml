@@ -21,6 +21,7 @@ spec:
       containers:
       - name: memory-hog
         image: memory-hog:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 5001
         resources:

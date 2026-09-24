@@ -1,7 +1,7 @@
 import requests, logging
 from datetime import datetime, timedelta, timezone
 
-log = logging.getLogger('kubeguard.prometheus')
+log = logging.getLogger('clusterpulse.prometheus')
 
 class PrometheusClient:
     def __init__(self, url='http://prometheus-server.monitoring.svc:9090'):
@@ -15,7 +15,7 @@ class PrometheusClient:
             r.raise_for_status()
             return r.json()['data']['result']
         except Exception as e:
-            log.error(f'Prometheus query failed: {e}')
+            log.error(f'Prometheus instant query failed: {e}')
             return []
 
     def query_range(self, promql, minutes=5):
@@ -35,45 +35,54 @@ class PrometheusClient:
             log.error(f'Prometheus range query failed: {e}')
             return []
 
-    def pod_memory_mb(self, namespace, pod_name):
-        """Current memory usage of a pod in MB."""
-        q = (f'container_memory_working_set_bytes{{namespace="{namespace}",'
-             f'pod=~"{pod_name}.*",container!="POD"}}')
-        res = self.query(q)
-        if res:
-            return float(res[0]['value'][1]) / 1024 / 1024
-        return 0.0
+    def bulk_pod_memory_trend(self, namespace, window_minutes=5):
+        """Calculate memory growth rate (%) and current usage (%) relative to limits for all pods in namespace."""
+        
+        # 1. Fetch memory limits for all pods
+        q_limits = f'kube_pod_container_resource_limits{{namespace="{namespace}",resource="memory"}}'
+        limit_results = self.query(q_limits)
+        limits = {}
+        for res in limit_results:
+            pod = res.get('metric', {}).get('pod')
+            if pod:
+                # Sum limits if there are multiple containers in a pod
+                limits[pod] = limits.get(pod, 0.0) + float(res['value'][1])
 
-    def pod_memory_trend_mb_per_min(self, namespace, pod_name, window_minutes=5):
-        """Calculate memory growth rate (MB/min) over the window.
-        Positive slope = growing = potential leak.
-        """
-        q = (f'container_memory_working_set_bytes{{namespace="{namespace}",'
-             f'pod=~"{pod_name}.*",container!="POD"}}')
-        results = self.query_range(q, minutes=window_minutes)
-        if not results or not results[0]['values']:
-            return 0.0
+        # 2. Fetch memory usage over time
+        q_mem = f'sum by (pod) (container_memory_working_set_bytes{{namespace="{namespace}",container!="POD",pod!=""}})'
+        results = self.query_range(q_mem, minutes=window_minutes)
+        
+        trends = {}
+        if not results:
+            return trends
             
-        values = [(float(ts), float(v)) for ts, v in results[0]['values']]
-        if len(values) < 2:
-            return 0.0
+        for res in results:
+            metric = res.get('metric', {})
+            pod = metric.get('pod')
             
-        # Simple linear slope: (last - first) / elapsed_minutes
-        elapsed_min = (values[-1][0] - values[0][0]) / 60
-        if elapsed_min == 0:
-            return 0.0
-        delta_mb = (values[-1][1] - values[0][1]) / 1024 / 1024
-        return delta_mb / elapsed_min
+            # Skip if we don't have a limit for this pod
+            if not pod or pod not in limits or limits[pod] == 0:
+                continue
+                
+            limit_bytes = limits[pod]
 
-    def get_request_rate_slope(self, namespace, deployment_name, window_minutes=5):
-        """Calculate slope of request rate. 
-        High memory slope + Flat/Low request slope = Confirmed Leak.
-        """
-        q = (f'rate(http_requests_total{{namespace="{namespace}",'
-             f'deployment="{deployment_name}"}}[{window_minutes}m])')
-        results = self.query_range(q, minutes=window_minutes)
-        if not results or not results[0]['values']:
-            return 0.0
-        values = [(float(ts), float(v)) for ts, v in results[0]['values']]
-        if len(values) < 2: return 0.0
-        return (values[-1][1] - values[0][1]) / ((values[-1][0] - values[0][0]) / 60)
+            values = [(float(ts), float(v)) for ts, v in res.get('values', [])]
+            if len(values) < 2:
+                continue
+                
+            elapsed_min = (values[-1][0] - values[0][0]) / 60
+            if elapsed_min == 0:
+                continue
+                
+            delta_bytes = values[-1][1] - values[0][1]
+            slope_bytes_per_min = delta_bytes / elapsed_min
+            current_bytes = values[-1][1]
+            
+            trends[pod] = {
+                'current_percent': (current_bytes / limit_bytes) * 100,
+                'slope_percent_per_min': (slope_bytes_per_min / limit_bytes) * 100,
+                'limit_mb': limit_bytes / 1024 / 1024,
+                'current_mb': current_bytes / 1024 / 1024
+            }
+            
+        return trends

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: kubeguard-controller
+  repository: clusterpulse-controller
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -20,21 +20,10 @@ kubernetes:
 healers:
   memory_leak:
     enabled: true
-    threshold_mb: 800
+    threshold_percent: 80
     trend_window_minutes: 5
-    slope_threshold_mb_per_min: 20
+    slope_threshold_percent_per_min: 5
     cooldown_minutes: 10
-
-alerts:
-  secretName: "kubeguard-alerts"
-  snsTopicArn: ""  # Set via --set alerts.snsTopicArn
-
-audit:
-  dynamodbTable: kubeguard-events
-  awsRegion: ap-south-1
-
-aws:
-  secretName: "kubeguard-aws-creds"
 
 serviceAccount:
   create: true

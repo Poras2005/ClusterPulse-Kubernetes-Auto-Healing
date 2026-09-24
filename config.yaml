@@ -1,23 +1,14 @@
 # config.yaml — non-sensitive settings only
-# Credentials injected at runtime via env vars
 
 kubernetes:
   namespace: default # namespace to watch
   watch_interval_seconds: 15 # how often healers run
-  prometheus_url: 'http://prometheus-server.monitoring.svc:9090'
+  prometheus_url: 'http://prometheus-server.monitoring.svc.cluster.local:80'
 
 healers:
   memory_leak:
     enabled: true
-    threshold_mb: 800 # start watching above this
+    threshold_percent: 80 # start watching above this percent
     trend_window_minutes: 5 # measure slope over this window
-    slope_threshold_mb_per_min: 20 # MB/min rise = leak
+    slope_threshold_percent_per_min: 5 # percent/min rise = leak
     cooldown_minutes: 10 # don't re-heal same pod for 10 min
-
-alerts:
-  slack_webhook: '' # set via SLACK_WEBHOOK env var
-  sns_topic_arn: '' # set via SNS_TOPIC_ARN env var
-
-audit:
-  dynamodb_table: kubeguard-events
-  aws_region: ap-south-1
