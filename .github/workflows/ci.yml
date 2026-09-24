@@ -45,9 +45,8 @@ jobs:
       
     - name: Build Docker image in Minikube
       run: |
-        # Point docker CLI to Minikube's docker daemon
-        eval $(minikube docker-env)
-        docker build -t clusterpulse-controller:latest -f controller/Dockerfile .
+        # Use Minikube's built-in image builder to avoid BuildKit daemon compatibility issues
+        minikube image build -t clusterpulse-controller:latest -f controller/Dockerfile .
         
     - name: Validate on Minikube
       run: |
