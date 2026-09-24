@@ -1,4 +1,4 @@
-# ClusterPulse — Cloud-Native Kubernetes Auto-Healing Platform
+# ClusterPulse — Kubernetes Auto-Healing Platform
 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Auto--Healing-326CE5?logo=kubernetes&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
@@ -7,7 +7,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
 ![Minikube](https://img.shields.io/badge/Minikube-Local_K8s-FF6F00)
 
-**ClusterPulse** is a proactive, cloud-native Kubernetes auto-healing controller. It acts as a specialized Site Reliability Engineer (SRE) running continuously inside your cluster.
+**ClusterPulse** is a proactive, Kubernetes auto-healing controller. It acts as a specialized Site Reliability Engineer (SRE) running continuously inside your cluster.
 
 Instead of waiting for a memory leak to exhaust pod limits and trigger a catastrophic `OOMKilled` crash (which causes dropped requests and 3:00 AM alerts), ClusterPulse constantly monitors memory velocity using Prometheus metrics. When it detects a dangerous growth trend, it gracefully executes a rolling restart of the application and emits a Kubernetes Warning event for your audit trail—preventing downtime before it happens.
 
