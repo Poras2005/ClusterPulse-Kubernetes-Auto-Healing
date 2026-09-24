@@ -44,11 +44,13 @@ The leak is temporarily "healed" with zero downtime, and an event is logged for 
 
 ClusterPulse was built with purpose-driven technology choices to emulate a production-grade Kubernetes controller:
 
-* **Python 3.12 & Kubernetes Python SDK**: Python allows for rapid iteration and highly readable operational scripts. The official Kubernetes SDK allows us to interact with the API Server securely using in-cluster ServiceAccount tokens without hardcoding credentials.
-* **Prometheus & PromQL**: Prometheus is the industry standard for cloud-native metrics. We use complex PromQL range queries (`sum by (pod)`) to aggregate metrics across nested container cgroups, ensuring accurate, real-time memory measurements.
-* **Helm**: Helm is used to package ClusterPulse. It allows us to bundle the Deployment, ConfigMaps, and RBAC rules into a single, version-controlled, reproducible installation.
-* **Docker**: Used to containerize the controller and the synthetic memory-hog test application, ensuring absolute parity between environments.
-* **Minikube**: Chosen as the target environment because it allows any developer to spin up a fully operational Kubernetes cluster locally for testing the auto-healing workflows.
+| Tech | Used For |
+| :--- | :--- |
+| **Python 3.12 & Kubernetes Python SDK** | Python allows for rapid iteration and highly readable operational scripts. The official Kubernetes SDK allows us to interact with the API Server securely using in-cluster ServiceAccount tokens without hardcoding credentials. |
+| **Prometheus & PromQL** | Prometheus is the industry standard for cloud-native metrics. We use complex PromQL range queries (`sum by (pod)`) to aggregate metrics across nested container cgroups, ensuring accurate, real-time memory measurements. |
+| **Helm** | Helm is used to package ClusterPulse. It allows us to bundle the Deployment, ConfigMaps, and RBAC rules into a single, version-controlled, reproducible installation. |
+| **Docker** | Used to containerize the controller and the synthetic memory-hog test application, ensuring absolute parity between environments. |
+| **Minikube** | Chosen as the target environment because it allows any developer to spin up a fully operational Kubernetes cluster locally for testing the auto-healing workflows. |
 
 ---
 
