@@ -43,14 +43,11 @@ jobs:
     - name: Start Minikube
       uses: medyagh/setup-minikube@latest
       
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
     - name: Build Docker image in Minikube
       run: |
         # Point docker CLI to Minikube's docker daemon
         eval $(minikube docker-env)
-        docker build -t kubeguard-controller:latest -f controller/Dockerfile .
+        docker build -t clusterpulse-controller:latest -f controller/Dockerfile .
         
     - name: Validate on Minikube
       run: |
@@ -60,6 +57,6 @@ jobs:
         # Here you would typically apply your K8s manifests
         # For example: 
         # kubectl apply -f k8s/
-        # kubectl wait --for=condition=available deployment/kubeguard-controller --timeout=60s
+        # kubectl wait --for=condition=available deployment/clusterpulse-controller --timeout=60s
         
         echo "Minikube validation step completed successfully."
