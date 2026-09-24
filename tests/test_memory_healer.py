@@ -79,8 +79,10 @@ class TestMemoryHealer(unittest.TestCase):
     def test_memory_leak_cooldown(self):
         self.prom.bulk_pod_memory_trend.return_value = {
             'test-pod-abc-123': {
-                'current_mb': 150,
-                'slope_mb_per_min': 25
+                'current_percent': 85.0,
+                'slope_percent_per_min': 25.0,
+                'limit_mb': 512,
+                'current_mb': 435
             }
         }
         self.k8s.get_deployment_for_pod.return_value = 'test-deploy'
