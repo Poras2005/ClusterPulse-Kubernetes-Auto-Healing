@@ -69,22 +69,38 @@ ClusterPulse operates on a continuous, multi-step reconciliation loop (defaultin
 ### Architecture Diagram
 
 ```mermaid
-flowchart TD
-    App[Application Pods]
-    App --> Metrics[/metrics Endpoint]
-    Metrics --> Prometheus[Prometheus Server]
-    Prometheus --> KG[ClusterPulse Controller]
+flowchart LR
+    %% Custom Styles
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef prom fill:#e6522c,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef pulse fill:#17223b,stroke:#fff,stroke-width:2px,color:#fff,rx:10px,ry:10px;
+    classDef action fill:#28a745,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef event fill:#ffc107,stroke:#fff,stroke-width:2px,color:#333;
+
+    %% Components
+    App("📦 App Pods"):::k8s
+    Prom("📊 Prometheus"):::prom
     
-    subgraph ClusterPulse Logic
-        KG --> Trend[Percentage Trend Analysis]
-        Trend --> Decision{Leak > 5%/min?}
-        Decision -->|Yes| Resolve[Resolve OwnerReferences]
+    subgraph Engine ["🛡️ ClusterPulse Controller"]
+        direction TB
+        Fetch("📥 Fetch Limits & Metrics"):::pulse
+        Calc("📈 Analyze Velocity (Slope)"):::pulse
+        Check{"⚠️ > 80% limit & \n > 5% growth?"}:::pulse
+        Resolve("🔗 Track Pod -> Deploy"):::pulse
+        
+        Fetch --> Calc --> Check
+        Check -->|Leak Detected!| Resolve
     end
     
-    Resolve --> K8sAPI[Kubernetes API Server]
-    K8sAPI --> Restart[Patch Deployment]
-    Restart --> K8sEvents[Emit K8s Warning Event]
-    Restart --> NewPod[Rolling Restart Triggered]
+    K8sAPI("⚙️ Kubernetes API"):::k8s
+    
+    %% Flow
+    App -.->|exposes /metrics| Prom
+    Prom == "PromQL Query" ==> Fetch
+    Resolve == "API Patch Request" ==> K8sAPI
+    
+    K8sAPI -.-> Restart("🔄 Graceful Rolling Restart"):::action
+    K8sAPI -.-> Event("📜 Emit K8s Warning Event"):::event
 ```
 
 ---
